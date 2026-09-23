@@ -1,0 +1,39 @@
+name: automerge
+
+# Funde PRs do Renovate assim que o workflow "ci" conclui com sucesso.
+# Seguro mesmo sem branch protection: só age após o CI ficar verde.
+
+on:
+  workflow_run:
+    workflows: ["ci"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const sha = context.payload.workflow_run.head_sha;
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner, repo, commit_sha: sha,
+            });
+            for (const pr of prs) {
+              if (pr.user.login !== 'renovate[bot]' || pr.draft || pr.merged) continue;
+              try {
+                await github.rest.pulls.merge({
+                  owner, repo, pull_number: pr.number, merge_method: 'squash',
+                });
+                core.info(`squash-merged #${pr.number}`);
+              } catch (err) {
+                core.warning(`não fundi #${pr.number}: ${err.message}`);
+              }
+            }

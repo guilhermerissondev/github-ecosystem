@@ -1,0 +1,46 @@
+name: rollout
+
+# 1 repo/dia no ecossistema: abre PR com o pack de manutenção no próximo
+# da fila (próprios, ativos, sem renovate.json, do mais ativo ao mais parado).
+# 9h37 BRT todo dia. Manual roda em dry-run, a menos que live=true.
+
+on:
+  schedule:
+    - cron: "37 12 * * *"
+  workflow_dispatch:
+    inputs:
+      live:
+        description: "Abrir PR de verdade (senão é dry-run)"
+        default: "false"
+        type: choice
+        options: ["false", "true"]
+      repo:
+        description: "Repo específico (vazio = próximo da fila)"
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  rollout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Rollout
+        env:
+          GH_TOKEN: ${{ secrets.ECOSYSTEM_TOKEN }}
+        run: |
+          ARGS="--dry-run"
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.live }}" = "true" ]; then
+            ARGS="--live"
+          fi
+          if [ -n "${{ inputs.repo }}" ]; then
+            ARGS="$ARGS --repo ${{ inputs.repo }}"
+          fi
+          python rollout.py $ARGS
