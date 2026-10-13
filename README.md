@@ -8,7 +8,7 @@ Renovate + workflows, do mais ativo ao mais parado. Atividade legítima
 
 Repos próprios, sem fork, sem arquivados, sem `.github/renovate.json`.
 Fora da fila: este hub, `tiktok-viral-generator` e `job-fit-triage`
-(onboardados à mão) e `guilhermehrsilva` (perfil, sem código).
+(onboardados à mão) e `guilhermerissondev` (perfil, sem código).
 
 ## Packs (`templates/`)
 
@@ -33,6 +33,6 @@ O workflow `rollout.yml` faz o `--live` todo dia 9h37 BRT sozinho.
 Ele precisa do secret `ECOSYSTEM_TOKEN` (PAT clássico com `repo` + `workflow`):
 
 ```bash
-gh secret set ECOSYSTEM_TOKEN --repo guilhermehrsilva/github-ecosystem
+gh secret set ECOSYSTEM_TOKEN --repo guilhermerissondev/github-ecosystem
 # cola um PAT com escopos repo + workflow
 ```

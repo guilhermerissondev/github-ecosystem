@@ -23,13 +23,13 @@ import sys
 import tempfile
 from pathlib import Path
 
-OWNER = "guilhermehrsilva"
+OWNER = "guilhermerissondev"
 BRANCH = "chore/ecosystem-pack"
-GIT_AUTHOR = "guilhermehrsilva"
-GIT_EMAIL = "guilhermehrsilva@users.noreply.github.com"
+GIT_AUTHOR = "guilhermerissondev"
+GIT_EMAIL = "guilhermerissondev@users.noreply.github.com"
 
 # Já onboardados à mão ou especiais: hub, portfólio com pack, perfil.
-EXCLUDE = {"github-ecosystem", "tiktok-viral-generator", "job-fit-triage", "guilhermehrsilva"}
+EXCLUDE = {"github-ecosystem", "tiktok-viral-generator", "job-fit-triage", "guilhermerissondev"}
 
 TEMPLATES = Path(__file__).resolve().parent / "templates"
 
