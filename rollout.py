@@ -10,7 +10,9 @@ Uso:
     python rollout.py --live               # onboarda o próximo da fila
     python rollout.py --live --repo NOME   # onboarda um repo específico
 
-Autenticação via `gh` (usa GH_TOKEN quando definido).
+Autenticação via `gh` (usa GH_TOKEN quando definido). No `--live`, o
+workflow roda `gh auth setup-git` antes: `gh repo clone` só autentica o
+próprio clone, e o `git push` do diretório temporário não vê o token.
 """
 
 from __future__ import annotations
@@ -38,14 +40,34 @@ PYTHON_MARKERS = {"pyproject.toml", "setup.py", "setup.cfg", "requirements.txt",
 TEST_MARKERS = {"pytest.ini", "tox.ini", "conftest.py"}
 
 
+def check(p: subprocess.CompletedProcess) -> subprocess.CompletedProcess:
+    """Imprime stdout/stderr capturados antes de propagar a falha."""
+    if p.returncode != 0:
+        cmd = p.args if isinstance(p.args, str) else " ".join(str(a) for a in p.args)
+        print(f"comando falhou ({p.returncode}): {cmd}", file=sys.stderr)
+        if p.stdout:
+            print("--- stdout ---", file=sys.stderr)
+            print(p.stdout, end="" if p.stdout.endswith("\n") else "\n", file=sys.stderr)
+        if p.stderr:
+            print("--- stderr ---", file=sys.stderr)
+            print(p.stderr, end="" if p.stderr.endswith("\n") else "\n", file=sys.stderr)
+        p.check_returncode()
+    return p
+
+
+def run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+    return check(subprocess.run(
+        cmd, capture_output=True, text=True, errors="replace", **kwargs))
+
+
 def gh(*args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(["gh", *args], capture_output=True, text=True)
+    return subprocess.run(
+        ["gh", *args], capture_output=True, text=True, errors="replace")
 
 
 def list_candidates() -> list[dict]:
-    p = gh("repo", "list", OWNER, "--limit", "200", "--json",
-           "name,isFork,isArchived,defaultBranchRef,pushedAt")
-    p.check_returncode()
+    p = check(gh("repo", "list", OWNER, "--limit", "200", "--json",
+                 "name,isFork,isArchived,defaultBranchRef,pushedAt"))
     repos = json.loads(p.stdout or "[]")
     out = [r for r in repos
            if not r["isFork"] and not r["isArchived"] and r["name"] not in EXCLUDE]
@@ -103,27 +125,18 @@ def copy_pack(pack: str, dest: Path) -> list[str]:
 def open_pr(repo: str, default_branch: str, pack: str) -> str:
     with tempfile.TemporaryDirectory(prefix="rollout-") as tmp:
         clone = Path(tmp) / repo
-        r = subprocess.run(
-            ["gh", "repo", "clone", f"{OWNER}/{repo}", str(clone)],
-            capture_output=True, text=True)
-        r.check_returncode()
-        subprocess.run(["git", "-C", str(clone), "checkout", default_branch],
-                       capture_output=True, check=True)
+        run(["gh", "repo", "clone", f"{OWNER}/{repo}", str(clone)])
+        run(["git", "-C", str(clone), "checkout", default_branch])
         added = copy_pack(pack, clone)
         if not added:
             return f"{repo}: nada novo a adicionar (pack já presente)"
         cfg = ["-c", f"user.name={GIT_AUTHOR}", "-c", f"user.email={GIT_EMAIL}"]
-        subprocess.run(["git", "-C", str(clone), "checkout", "-B", BRANCH],
-                       capture_output=True, check=True)
-        subprocess.run(["git", "-C", str(clone), *cfg, "add", ".github"],
-                       capture_output=True, check=True)
-        subprocess.run(
-            ["git", "-C", str(clone), *cfg, "commit", "-m",
-             "chore: bot de manutencao (pack do ecossistema)"],
-            capture_output=True, check=True)
-        subprocess.run(
-            ["git", "-C", str(clone), "push", "-u", "origin", BRANCH],
-            capture_output=True, check=True)
+        run(["git", "-C", str(clone), "checkout", "-B", BRANCH])
+        run(["git", "-C", str(clone), *cfg, "add", ".github"])
+        run(["git", "-C", str(clone), *cfg, "commit", "-m",
+             "chore: bot de manutencao (pack do ecossistema)"])
+        # Credencial vem do `gh auth setup-git` do workflow (GH_TOKEN).
+        run(["git", "-C", str(clone), "push", "-u", "origin", BRANCH])
         body = (
             "Pack do ecossistema de manutenção (1 repo/dia):\n\n"
             "- **renovate.json**: updates de deps + github-actions toda segunda 9h BRT\n"
@@ -132,12 +145,11 @@ def open_pr(repo: str, default_branch: str, pack: str) -> str:
             + ("- **ci.yml/health.yml**: suíte semanal\n" if pack.startswith("full") else "") +
             "\nCI existente preservado; nada no código muda."
         )
-        p = subprocess.run(
+        p = run(
             ["gh", "pr", "create", "--repo", f"{OWNER}/{repo}",
              "--title", "chore: bot de manutenção (pack do ecossistema)",
              "--body", body, "--head", BRANCH, "--base", default_branch],
-            capture_output=True, text=True, cwd=str(clone))
-        p.check_returncode()
+            cwd=str(clone))
         return p.stdout.strip()
 
 

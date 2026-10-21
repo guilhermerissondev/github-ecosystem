@@ -38,6 +38,10 @@ jobs:
         run: |
           ARGS="--dry-run"
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.live }}" = "true" ]; then
+            # gh repo clone autentica só aquele comando. O git push do
+            # clone temporário precisa do gh como credential helper para
+            # usar GH_TOKEN (ECOSYSTEM_TOKEN), não o GITHUB_TOKEN do job.
+            gh auth setup-git
             ARGS="--live"
           fi
           if [ -n "${{ inputs.repo }}" ]; then

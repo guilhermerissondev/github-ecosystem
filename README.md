@@ -30,9 +30,16 @@ python rollout.py --live --repo NOME   # um específico
 ```
 
 O workflow `rollout.yml` faz o `--live` todo dia 9h37 BRT sozinho.
-Ele precisa do secret `ECOSYSTEM_TOKEN` (PAT clássico com `repo` + `workflow`):
+`workflow_dispatch` continua em dry-run, a menos que `live=true`.
+
+Ele precisa do secret `ECOSYSTEM_TOKEN`. O pack grava arquivos em
+`.github/workflows/`, então o token precisa de escrita em **Contents**,
+**Pull requests** e **Workflows** (PAT clássico: escopos `repo` +
+`workflow`). No `--live`, o job roda `gh auth setup-git` para o
+`git push` do clone temporário usar esse token.
 
 ```bash
 gh secret set ECOSYSTEM_TOKEN --repo guilhermerissondev/github-ecosystem
-# cola um PAT com escopos repo + workflow
+# PAT fine-grained: Contents + Pull requests + Workflows (write)
+# ou clássico: repo + workflow
 ```
