@@ -32,6 +32,12 @@ GIT_EMAIL = "guilhermerissondev@users.noreply.github.com"
 
 # Já onboardados à mão ou especiais: hub, portfólio com pack, perfil.
 EXCLUDE = {"github-ecosystem", "tiktok-viral-generator", "job-fit-triage", "guilhermerissondev"}
+# Cópias de projetos de terceiros (clone + push, não fork): o GitHub não as marca como
+# fork, e cada PR do pack disparava a CI delas na franquia de minutos da conta, que
+# acabou em 23/11/2026.
+EXCLUDE |= {"Anthropic-Cybersecurity-Skills", "OpenJarvis", "or-tools",
+            "datarisk-case-ds-junior-teste", "dio-lab-open-source", "power_bi_analyst",
+            "lab-aws-sagemaker-canvas-estoque"}
 
 TEMPLATES = Path(__file__).resolve().parent / "templates"
 
